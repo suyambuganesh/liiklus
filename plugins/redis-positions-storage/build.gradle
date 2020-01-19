@@ -1,0 +1,35 @@
+jar {
+    manifest {
+        attributes(
+                'Plugin-Id': "${project.name}",
+                'Plugin-Version': "${project.version}",
+        )
+    }
+
+    into('lib') {
+        from(configurations.compile - configurations.compileOnly)
+    }
+}
+
+tasks.test.dependsOn(
+        jar,
+        rootProject.project(":inmemory-records-storage").getTasksByName("jar", false)
+)
+
+dependencies {
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    compileOnly 'com.google.auto.service:auto-service'
+    annotationProcessor 'com.google.auto.service:auto-service'
+
+    compileOnly project(":app")
+
+    compile 'io.lettuce:lettuce-core'
+
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testCompile project(":tck")
+    testCompile 'org.springframework.boot:spring-boot-test'
+    testCompile 'org.testcontainers:testcontainers'
+}

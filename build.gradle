@@ -3,18 +3,17 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.1.1.RELEASE")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.2.1.RELEASE")
     }
 }
 
 plugins {
-    id "com.google.protobuf" version "0.8.4" apply false
+    id "com.google.protobuf" version "0.8.10" apply false
 }
 
 allprojects {
     repositories {
         jcenter()
-        maven { url "https://repo.spring.io/snapshot" }
         maven { url "https://repo.spring.io/milestone" }
         maven { url 'https://jitpack.io' }
     }
@@ -36,14 +35,29 @@ configure(subprojects.findAll { !it.name.startsWith("examples/") }) {
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'maven'
     apply plugin: 'java'
+    apply from: "$rootDir/gradle/rerunTests.gradle"
 
-    sourceCompatibility = targetCompatibility = 10
+    sourceCompatibility = targetCompatibility = 11
 
-    test.testLogging {
-        displayGranularity 1
-        showStackTraces = true
-        exceptionFormat = 'full'
-        events "STARTED", "PASSED", "FAILED", "SKIPPED"
+    test {
+        useJUnitPlatform()
+
+        testLogging {
+            displayGranularity 1
+            showStackTraces = true
+            exceptionFormat = 'full'
+            events "STARTED", "PASSED", "FAILED", "SKIPPED"
+        }
+    }
+
+    jar {
+        manifest {
+            attributes(
+                    'Manifest-Version': '1.0',
+                    'Implementation-Version': "${project.version}",
+                    'Implementation-Title': "${project.name}"
+            )
+        }
     }
 
     project.afterEvaluate {
@@ -54,53 +68,42 @@ configure(subprojects.findAll { !it.name.startsWith("examples/") }) {
         overriddenByDependencies = false
 
         imports {
-            mavenBom 'org.junit:junit-bom:5.3.2'
+            mavenBom 'org.junit:junit-bom:5.5.2'
             mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
-            mavenBom 'org.testcontainers:testcontainers-bom:1.10.3'
+            mavenBom 'org.testcontainers:testcontainers-bom:1.12.3'
+            mavenBom 'io.grpc:grpc-bom:1.24.1'
+            mavenBom 'com.google.protobuf:protobuf-bom:3.10.0'
         }
 
         dependencies {
-            dependency 'org.projectlombok:lombok:1.18.4'
+            dependency 'org.projectlombok:lombok:1.18.10'
 
-            dependency 'org.pf4j:pf4j:2.4.0'
+            dependency 'org.pf4j:pf4j:3.1.0'
 
-            dependencySet(group: 'io.rsocket', version: '0.11.12') {
+            dependencySet(group: 'io.rsocket', version: '0.11.16') {
                 entry 'rsocket-transport-netty'
                 entry 'rsocket-core'
             }
 
-            dependencySet(group: 'io.rsocket.rpc', version: '0.2.10') {
+            dependencySet(group: 'io.rsocket.rpc', version: '0.2.12') {
                 entry 'rsocket-rpc-core'
                 entry 'rsocket-rpc-protobuf'
             }
 
-            dependency 'io.prometheus:simpleclient_common:0.5.0'
+            dependency 'io.prometheus:simpleclient_common:0.8.0'
 
-            dependency 'org.springframework.fu:spring-fu-jafu:0.0.3.BUILD-SNAPSHOT'
+            dependency 'org.springframework.fu:spring-fu-autoconfigure-adapter:0.2.1'
 
-            dependencySet(group: 'com.google.protobuf', version: '3.6.1') {
-                entry 'protoc'
-                entry 'protobuf-java'
-                entry 'protobuf-java-util'
-            }
+            dependency 'com.google.protobuf:protoc:3.10.1'
 
-            dependency 'com.google.auto.service:auto-service:1.0-rc4'
+            dependency 'com.google.auto.service:auto-service:1.0-rc6'
 
             // Override kafka-clients' version, otherwise it comes from Spring Boot
-            dependency 'org.apache.kafka:kafka-clients:2.1.0'
+            dependency 'org.apache.kafka:kafka-clients:2.3.1'
 
-            dependencySet(group: 'io.grpc', version: '1.15.1') {
-                entry 'grpc-netty'
-                entry 'grpc-core'
-                entry 'grpc-services'
-                entry 'grpc-protobuf'
-                entry 'grpc-stub'
-                entry 'protoc-gen-grpc-java'
-            }
+            dependency 'com.salesforce.servicelibs:reactor-grpc-stub:0.10.0'
 
-            dependency 'com.salesforce.servicelibs:reactor-grpc-stub:0.9.0'
-
-            dependency 'org.awaitility:awaitility:3.1.3'
+            dependency 'org.awaitility:awaitility:4.0.1'
         }
     }
 }

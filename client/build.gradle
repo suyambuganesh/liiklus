@@ -1,7 +1,74 @@
+plugins {
+    id "idea"
+}
+
+apply plugin: "com.google.protobuf"
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc'
+    }
+
+    generatedFilesBaseDir = "$projectDir/generated"
+
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java'
+        }
+
+        reactor {
+            artifact = "com.salesforce.servicelibs:reactor-grpc:0.9.0:jdk8@jar"
+        }
+
+        rsocketRpc {
+            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf'
+        }
+    }
+
+    generateProtoTasks {
+        ofSourceSet('main').each { task ->
+            task.builtins {
+                remove java
+            }
+            task.plugins {
+                grpc { }
+                reactor { }
+                rsocketRpc { }
+            }
+        }
+    }
+}
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
+
+idea {
+    module {
+        generatedSourceDirs += file("${protobuf.generatedFilesBaseDir}/main/java")
+        generatedSourceDirs += file("${protobuf.generatedFilesBaseDir}/main/reactor")
+        generatedSourceDirs += file("${protobuf.generatedFilesBaseDir}/main/grpc")
+        generatedSourceDirs += file("${protobuf.generatedFilesBaseDir}/main/rsocketRpc")
+    }
+}
+
+sourceCompatibility = targetCompatibility = 8
+
+test {
+    useJUnit()
+}
+
 dependencies {
     compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 
+    protobuf project(":protocol")
     compile project(":protocol")
+
+    compile 'io.grpc:grpc-stub'
+    compile 'io.grpc:grpc-protobuf'
+    compile 'com.salesforce.servicelibs:reactor-grpc-stub'
+    compile 'io.rsocket.rpc:rsocket-rpc-core'
 
     compile 'io.rsocket:rsocket-transport-netty'
     compile 'io.grpc:grpc-netty'

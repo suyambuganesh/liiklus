@@ -8,7 +8,6 @@ import org.pf4j.ManifestPluginDescriptorFinder;
 import org.pf4j.PluginDescriptorFinder;
 import org.pf4j.PluginLoader;
 import org.pf4j.PluginRepository;
-import org.pf4j.ServiceProviderExtensionFinder;
 
 import java.nio.file.Path;
 
@@ -34,11 +33,12 @@ public class LiiklusPluginManager extends DefaultPluginManager {
 
     @Override
     protected ExtensionFinder createExtensionFinder() {
-        return new ServiceProviderExtensionFinder(this);
+        return new LiiklusExtensionFinder(this);
     }
 
     @Override
     protected PluginLoader createPluginLoader() {
-        return new LiiklusPluginLoader(this, pluginClasspath);
+        return new LiiklusPluginLoader(this);
     }
+
 }

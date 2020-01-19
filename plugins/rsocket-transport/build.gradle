@@ -1,0 +1,78 @@
+plugins {
+    id "idea"
+}
+
+apply plugin: "com.google.protobuf"
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc'
+    }
+
+    generatedFilesBaseDir = "$projectDir/generated"
+
+    plugins {
+        rsocketRpc {
+            artifact = 'io.rsocket.rpc:rsocket-rpc-protobuf'
+        }
+    }
+
+    generateProtoTasks {
+        ofSourceSet('main').each { task ->
+            task.builtins {
+                remove java
+            }
+            task.plugins {
+                rsocketRpc { }
+            }
+        }
+    }
+}
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
+
+idea {
+    module {
+        generatedSourceDirs += file("${protobuf.generatedFilesBaseDir}/main/java")
+        generatedSourceDirs += file("${protobuf.generatedFilesBaseDir}/main/rsocketRpc")
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                'Plugin-Id': "${project.name}",
+                'Plugin-Version': "${project.version}",
+        )
+    }
+
+    into('lib') {
+        from(configurations.compile - configurations.compileOnly)
+    }
+}
+
+dependencies {
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    compileOnly 'com.google.auto.service:auto-service'
+    annotationProcessor 'com.google.auto.service:auto-service'
+
+    protobuf project(":protocol")
+
+    compileOnly project(":app")
+
+    compile 'io.rsocket.rpc:rsocket-rpc-core'
+    compile 'io.rsocket:rsocket-transport-netty'
+
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testCompile 'org.junit.jupiter:junit-jupiter-api'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    testCompile project(":app")
+    testCompile 'org.springframework.boot:spring-boot-test'
+    testCompile 'org.assertj:assertj-core'
+    testCompile 'org.mockito:mockito-core'
+}

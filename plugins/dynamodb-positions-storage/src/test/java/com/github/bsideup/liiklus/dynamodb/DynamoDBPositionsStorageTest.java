@@ -1,57 +1,37 @@
 package com.github.bsideup.liiklus.dynamodb;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsync;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient;
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.KeyType;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
-import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
+import com.github.bsideup.liiklus.ApplicationRunner;
 import com.github.bsideup.liiklus.positions.PositionsStorage;
 import com.github.bsideup.liiklus.positions.PositionsStorageTests;
 import lombok.Getter;
-import org.junit.jupiter.api.BeforeEach;
+import org.springframework.context.ApplicationContext;
 import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.containers.localstack.LocalStackContainer.Service;
 
 import java.util.UUID;
-
-import static java.util.Arrays.asList;
 
 class DynamoDBPositionsStorageTest implements PositionsStorageTests {
 
     private static final LocalStackContainer localstack = new LocalStackContainer("0.8.6")
-            .withServices(LocalStackContainer.Service.DYNAMODB);
+            .withServices(Service.DYNAMODB);
+
+    static final ApplicationContext applicationContext;
 
     static {
         localstack.start();
+        var endpointConfiguration = localstack.getEndpointConfiguration(Service.DYNAMODB);
+        System.setProperty("aws.region", endpointConfiguration.getSigningRegion());
+        var credentials = localstack.getDefaultCredentialsProvider().getCredentials();
+        System.setProperty("aws.accessKeyId", credentials.getAWSAccessKeyId());
+        System.setProperty("aws.secretAccessKey", credentials.getAWSSecretKey());
+
+        applicationContext = new ApplicationRunner("MEMORY", "DYNAMODB")
+                .withProperty("dynamodb.autoCreateTable", "true")
+                .withProperty("dynamodb.positionsTable", "positions-" + UUID.randomUUID())
+                .withProperty("dynamodb.endpoint", endpointConfiguration.getServiceEndpoint())
+                .run();
     }
-
-    private final AmazonDynamoDBAsync dynamoDB = AmazonDynamoDBAsyncClient.asyncBuilder()
-            .withEndpointConfiguration(localstack.getEndpointConfiguration(LocalStackContainer.Service.DYNAMODB))
-            .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials("key", "secret")))
-            .build();
-
-    private final String tableName = UUID.randomUUID().toString();
 
     @Getter
-    PositionsStorage storage = new DynamoDBPositionsStorage(dynamoDB, tableName);
-
-    @BeforeEach
-    void setUp() {
-        dynamoDB.createTable(new CreateTableRequest(
-                asList(
-                        new AttributeDefinition(DynamoDBPositionsStorage.HASH_KEY_FIELD, ScalarAttributeType.S),
-                        new AttributeDefinition(DynamoDBPositionsStorage.RANGE_KEY_FIELD, ScalarAttributeType.S)
-                ),
-                tableName,
-                asList(
-                        new KeySchemaElement(DynamoDBPositionsStorage.HASH_KEY_FIELD, KeyType.HASH),
-                        new KeySchemaElement(DynamoDBPositionsStorage.RANGE_KEY_FIELD, KeyType.RANGE)
-                ),
-                new ProvisionedThroughput(10L, 10L)
-        ));
-    }
+    PositionsStorage storage = applicationContext.getBean(PositionsStorage.class);
 }

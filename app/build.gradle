@@ -1,20 +1,31 @@
 apply plugin: 'org.springframework.boot'
 
+test {
+    useJUnit()
+}
+
+jar {
+    enabled = true
+}
+
+bootJar {
+    archiveClassifier = 'boot'
+}
+
 dependencies {
     compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 
     compile project(":api")
     compile project(":protocol")
 
     compile 'org.springframework.boot:spring-boot-starter-webflux'
-    compile 'org.springframework.fu:spring-fu-jafu'
+    compile 'org.springframework.fu:spring-fu-autoconfigure-adapter'
 
-    compile 'io.grpc:grpc-netty'
-    compile 'io.prometheus:simpleclient_common'
     compile 'org.pf4j:pf4j'
-    compile 'io.rsocket:rsocket-transport-netty'
 
     testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
     testCompile 'org.springframework.boot:spring-boot-starter-test'
     testCompile 'org.assertj:assertj-core'
     testCompile 'org.awaitility:awaitility'

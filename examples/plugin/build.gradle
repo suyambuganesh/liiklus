@@ -3,8 +3,11 @@ plugins {
     id "io.spring.dependency-management"
 }
 
-
 sourceCompatibility = targetCompatibility = 8
+
+test {
+    useJUnit()
+}
 
 jar {
     baseName = "example-plugin"
@@ -35,30 +38,32 @@ dependencyManagement {
 
     imports {
         mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
-        mavenBom 'org.testcontainers:testcontainers-bom:1.10.3'
+        mavenBom 'org.testcontainers:testcontainers-bom:1.12.3'
     }
 
     dependencies {
-        dependencySet(group: "com.github.bsideup.liiklus", version: "0.7.0") {
+        dependencySet(group: "com.github.bsideup.liiklus", version: "0.9.0") {
             entry "api"
             entry "client"
             entry "testing"
         }
 
-        dependency 'org.projectlombok:lombok:1.18.4'
-        dependency 'com.google.auto.service:auto-service:1.0-rc4'
+        dependency 'org.projectlombok:lombok:1.18.10'
+        dependency 'com.google.auto.service:auto-service:1.0-rc6'
     }
 }
 
 dependencies {
     compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
     compileOnly "com.google.auto.service:auto-service"
+    annotationProcessor "com.google.auto.service:auto-service"
 
     compileOnly "com.github.bsideup.liiklus:api"
     compileOnly 'org.springframework.boot:spring-boot-starter'
     compileOnly 'io.projectreactor:reactor-core'
 
-    compile 'org.apache.commons:commons-lang3:3.8.1'
+    compile 'org.apache.commons:commons-lang3:3.9'
 
     testCompile 'org.testcontainers:kafka'
     testCompile 'ch.qos.logback:logback-classic:'

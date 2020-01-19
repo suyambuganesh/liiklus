@@ -1,6 +1,6 @@
 package com.github.bsideup.liiklus.records.inmemory;
 
-import com.github.bsideup.liiklus.records.RecordsStorage;
+import com.github.bsideup.liiklus.records.FiniteRecordsStorage;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -32,7 +33,7 @@ import java.util.stream.Stream;
  */
 @RequiredArgsConstructor
 @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
-public class InMemoryRecordsStorage implements RecordsStorage {
+public class InMemoryRecordsStorage implements FiniteRecordsStorage {
 
     public static int partitionByKey(String key, int numberOfPartitions) {
         return partitionByKey(ByteBuffer.wrap(key.getBytes()), numberOfPartitions);
@@ -51,7 +52,9 @@ public class InMemoryRecordsStorage implements RecordsStorage {
         var topic = envelope.getTopic();
         var storedTopic = state.computeIfAbsent(topic, __ -> new StoredTopic(numberOfPartitions));
 
-        var partition = partitionByKey(envelope.getKey(), numberOfPartitions);
+        var partition = envelope.getKey() != null
+                ? partitionByKey(envelope.getKey(), numberOfPartitions)
+                : ThreadLocalRandom.current().nextInt(0, numberOfPartitions);
         var storedPartition = storedTopic.getPartitions().computeIfAbsent(
                 partition,
                 __ -> new StoredTopic.StoredPartition()
@@ -69,6 +72,20 @@ public class InMemoryRecordsStorage implements RecordsStorage {
                 partition,
                 offset
         ));
+    }
+
+    @Override
+    public CompletionStage<Map<Integer, Long>> getEndOffsets(String topic) {
+        var partitions = state.getOrDefault(topic, new StoredTopic(numberOfPartitions)).getPartitions();
+        return CompletableFuture.completedFuture(
+                partitions.entrySet().stream().collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        it -> Math.max(
+                                0,
+                                it.getValue().getNextOffset().get() - 1
+                        )
+                ))
+        );
     }
 
     @Override
@@ -126,7 +143,7 @@ public class InMemoryRecordsStorage implements RecordsStorage {
                                     .map(it -> new Record(
                                             new Envelope(
                                                     topic,
-                                                    it.getKey().asReadOnlyBuffer(),
+                                                    it.getKey() != null ? it.getKey().asReadOnlyBuffer() : null,
                                                     it.getValue().asReadOnlyBuffer()
                                             ),
                                             it.getTimestamp(),

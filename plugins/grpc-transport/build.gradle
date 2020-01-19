@@ -1,0 +1,87 @@
+plugins {
+    id "idea"
+}
+
+apply plugin: "com.google.protobuf"
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc'
+    }
+
+    generatedFilesBaseDir = "$projectDir/generated"
+
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java'
+        }
+
+        reactor {
+            artifact = "com.salesforce.servicelibs:reactor-grpc:0.9.0:jdk8@jar"
+        }
+    }
+
+    generateProtoTasks {
+        ofSourceSet('main').each { task ->
+            task.builtins {
+                remove java
+            }
+            task.plugins {
+                grpc { }
+                reactor { }
+            }
+        }
+    }
+}
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
+
+idea {
+    module {
+        generatedSourceDirs += file("${protobuf.generatedFilesBaseDir}/main/java")
+        generatedSourceDirs += file("${protobuf.generatedFilesBaseDir}/main/grpc")
+        generatedSourceDirs += file("${protobuf.generatedFilesBaseDir}/main/reactor")
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                'Plugin-Id': "${project.name}",
+                'Plugin-Version': "${project.version}",
+        )
+    }
+
+    into('lib') {
+        from(configurations.compile - configurations.compileOnly)
+    }
+}
+
+dependencies {
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    compileOnly 'com.google.auto.service:auto-service'
+    annotationProcessor 'com.google.auto.service:auto-service'
+
+    compileOnly project(":app")
+
+    protobuf project(":protocol")
+
+    compile 'com.salesforce.servicelibs:reactor-grpc-stub'
+    compile 'io.grpc:grpc-stub'
+    compile 'io.grpc:grpc-protobuf'
+    compile 'io.grpc:grpc-netty'
+    compile 'io.grpc:grpc-services'
+
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testCompile 'org.junit.jupiter:junit-jupiter-api'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    testCompile project(":app")
+    testCompile 'org.springframework.boot:spring-boot-test'
+    testCompile 'org.assertj:assertj-core'
+    testCompile 'org.mockito:mockito-core'
+}
